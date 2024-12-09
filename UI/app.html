@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Famous Sports Persons Image Classification</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <style>
+        /* Custom Styles */
+        .file-input-wrapper {
+            border: 2px dashed #007bff;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 20px;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .file-input-wrapper p {
+            margin: 0;
+        }
+
+        .error-message {
+            color: red;
+            display: none;
+        }
+
+        .result-holder {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .player-icons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .player-icon {
+            text-align: center;
+        }
+
+        .player-icon img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+
+        .classified-person img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Famous Sports Persons Image Classification</h1>
+
+        <!-- Player Icons Row -->
+        <div class="row player-icons">
+            <!-- Player 1 -->
+            <div class="col text-center player-icon">
+                <img src="UI/images/kane-williamson-1.jpg" alt="Kane Williamson" id="player-kane">
+                <p>Kane Williamson</p>
+            </div>
+
+            <!-- Player 2 -->
+            <div class="col text-center player-icon">
+                <img src="UI/images/vi1.png" alt="Virat Kohli" id="player-virat">
+                <p>Virat Kohli</p>
+            </div>
+
+            <!-- Player 3 -->
+            <div class="col text-center player-icon">
+                <img src="UI/images/ronaldo.jpg" alt="Cristiano Ronaldo" id="player-cristiano">
+                <p>Cristiano Ronaldo</p>
+            </div>
+
+            <!-- Player 4 -->
+            <div class="col text-center player-icon">
+                <img src="UI/images/serena-williams.jpg" alt="Serena Williams" id="player-sania">
+                <p>Sania Mirza</p>
+            </div>
+
+            <!-- Player 5 -->
+            <div class="col text-center player-icon">
+                <img src="UI/images/pat-cummins1.jpg" alt="Lionel Messi" id="player-messi">
+                <p>Pat Cummins</p>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row">
+            <div class="col-sm-4 left-column">
+                <div class="file-input-wrapper" onclick="document.getElementById('fileInput').click();">
+                    <p>Click or Drag to Upload Image</p>
+                    <input type="file" id="fileInput" accept="image/*" onchange="handleFileChange(event)">
+                </div>
+                <div class="row mt-3">
+                    <div class="col-3 mx-auto">
+                        <button id="submitBtn" type="button" class="btn btn-success">Classify</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-8 right-column">
+                <div class="classified-person hidden" id="classifiedPerson"></div>
+                <h3 id="classifiedPersonName"></h3>
+
+                <div class="table-container hidden" id="divClassTable">
+                    <table id="classTable" class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Probability</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div class="col-sm-8">
+            <p class="error-message" id="errorMessage">Please upload a valid image file.</p>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script>
+        let selectedFile;
+
+        function handleFileChange(event) {
+            selectedFile = event.target.files[0];
+            if (selectedFile) {
+                $("#errorMessage").hide();
+                $("#resultHolder").hide();
+                $("#divClassTable").hide();
+                $("#classifiedPerson").hide();
+            }
+        }
+
+        $("#submitBtn").on("click", function() {
+            if (!selectedFile) {
+                alert("Please upload a file first!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageData = e.target.result;  // Base64 image data
+
+                const url = "http://127.0.0.1:5000/classify_image";  // Flask server URL
+
+                $.post(url, { image_data: imageData }, function(data) {
+                    if (!data || data.length === 0) {
+                        $("#errorMessage").show();
+                    } else {
+                        displayResults(data);
+                    }
+                });
+            };
+
+            reader.readAsDataURL(selectedFile); // Read file as base64
+        });
+
+        function displayResults(data) {
+            let match = null;
+            let bestScore = -1;
+
+            for (let i = 0; i < data.length; ++i) {
+                let maxScore = Math.max(...data[i].class_probability);
+                if (maxScore > bestScore) {
+                    match = data[i];
+                    bestScore = maxScore;
+                }
+            }
+
+            if (match) {
+                $("#errorMessage").hide();
+
+                const playerImage = $("#" + "player-" + match.class.toLowerCase()).attr("src");
+                $("#classifiedPerson").html(`<img src="${playerImage}" alt="${match.class}" />`);
+                $("#classifiedPersonName").html(`<strong>Classified as:</strong> ${match.class}`);
+                $("#classifiedPerson").show();
+
+                let classDictionary = match.class_dictionary;
+                let tableBody = "";
+                for (let personName in classDictionary) {
+                    let index = classDictionary[personName];
+                    let probabilityScore = match.class_probability[index];
+                    tableBody += `<tr><td>${personName}</td><td>${probabilityScore}%</td></tr>`;
+                }
+
+                $("#classTableBody").html(tableBody);
+                $("#divClassTable").show();
+            }
+        }
+    </script>
+</body>
+</html>
